@@ -105,7 +105,7 @@ linked_prs() {
             -f q="repo:$sibling is:pr is:open in:body \"Linked: $REPO#$PR\"" --jq '.items[].number' 2>/dev/null); do
             # the search matches words: 12 may also find #123
             if GH_TOKEN=$MERGEBOT_TOKEN gh pr view "$number" --repo "$sibling" --json body --jq .body | tr -d '\r' \
-                | grep -qiE "^[[:space:]]*linked:[[:space:]]*$REPO#$PR[[:space:]]*$"; then
+                | grep -qiE "^[[:space:]]*linked:[[:space:]]*${REPO}#${PR}[[:space:]]*$"; then
                 echo "$sibling#$number"
             fi
         done
