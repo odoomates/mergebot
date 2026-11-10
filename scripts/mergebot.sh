@@ -172,11 +172,12 @@ rebase_branch() {
         }' > /dev/null 2>&1
 }
 
-# the state of CI on a commit: pending, failed, cancelled, none or passed. Not the jobs of the mergebot.
+# the state of CI on a commit: pending, failed, cancelled, none or passed. Not the jobs of the mergebot, named
+# "<calling job> / command" when it is called from another repository.
 ci_state() {
     # shellcheck disable=SC2016
     GH_TOKEN=${MERGEBOT_TOKEN:-$GH_TOKEN} gh api "repos/$REPO/commits/$1/check-runs?per_page=100" --jq '
-        [.check_runs[] | select(.name != "command" and .name != "thanks")]
+        [.check_runs[] | select(.name | test("^(.+ / )?(command|thanks)$") | not)]
         | group_by(.name) | map(max_by(.started_at))
         | if length == 0 then "none"
           elif any(.status != "completed") then "pending"
