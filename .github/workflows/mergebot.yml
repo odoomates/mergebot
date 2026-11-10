@@ -16,7 +16,7 @@ name: Mergebot
 #         pull-requests: write
 #         issues: write
 #         checks: read
-#       uses: odoomates/mergebot/.github/workflows/mergebot.yml@v1
+#       uses: odoomates/mergebot/.github/workflows/mergebot.yml@main
 #       secrets: inherit
 #
 # Commands, on the first line of a comment of a pull request (the slash is required):
@@ -38,15 +38,15 @@ name: Mergebot
 # MERGEBOT_TOKEN secret: a token of an admin of the repository, which the required checks do not stop.
 # Only the owner and the collaborators of the repository may use them. Once merged, the bot thanks the
 # author and deletes the branch, if of this repository. It never checks out nor runs the code of the pull
-# request: its scripts come from this repository, at the release named by `bot-ref`.
+# request: its scripts come from this repository, from its main branch (`bot-ref`).
 
 on:
   workflow_call:
     inputs:
       bot-ref:
-        description: the release of the scripts, the same as the one in `uses:`
+        description: the branch of the scripts, the same as the one in `uses:` (to try a branch of the bot)
         type: string
-        default: v1
+        default: main
       roles:
         description: >-
           the roles of the repository allowed to command the bot: on a repository of a personal account, the

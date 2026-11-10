@@ -26,7 +26,7 @@ jobs:
       pull-requests: write
       issues: write
       checks: read
-    uses: odoomates/mergebot/.github/workflows/mergebot.yml@v1
+    uses: odoomates/mergebot/.github/workflows/mergebot.yml@main
     secrets: inherit
 ```
 
@@ -38,8 +38,8 @@ Secrets of the repository:
   `owner/repo` separated by spaces.
 - `MERGEBOT_MIGRATION_CHECK` (optional): `owner/repo@ref` of a migration checker run on the forward-ports.
 
-Inputs: `bot-ref`, the release of the scripts (`v1` by default, keep it the same as in `uses:`), and `roles`, the
-roles allowed to command the bot (`admin maintain write` by default).
+Inputs: `bot-ref`, the branch of the scripts (`main` by default: set it with `uses:` to try another branch), and
+`roles`, the roles allowed to command the bot (`admin maintain write` by default).
 
 ## Commands
 
@@ -62,7 +62,8 @@ A line `Linked: owner/repo#12` in the description links two pull requests: `/mer
 The bot never checks out nor runs the code of a pull request: it runs its own scripts, from this repository, and
 calls the GitHub API.
 
-## Releases
+## Changes
 
-The repositories call a release tag, `v1`. A change is merged on `main`, tried on a test repository calling
-`@main`, then the tag is moved to it.
+The repositories call `main`: a change merged there applies to all of them at once. So a change comes as a pull
+request whose checks pass, and is tried first on a test repository calling its branch, with `uses:` and `bot-ref`
+set to it.
