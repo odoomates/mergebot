@@ -11,6 +11,7 @@
 #                               the same, with this level of version bump
 #   /mergebot r+ nobump          the same, without a version bump (the label nobump: also for a merge by hand)
 #   /mergebot r+ skipci          merge now, without waiting for CI nor rebasing: for the admins of the repository
+#                               (also while an earlier r+ waits for CI: a newer r+ or r- stops that wait and runs)
 #   /mergebot r+ fw+             merge, then forward-port: one pull request of its commits to every higher version
 #                               branch (fw+ goes with r+, in any order, also with a bump level)
 #   /mergebot r+ fw+ 19.0        the same, up to this branch included (also: fw+ upto 19.0); on a pull request
@@ -187,18 +188,33 @@ ci_state() {
           else "passed" end' 2>/dev/null || echo unknown
 }
 
+# the newest r+ or r- of a maintainer posted after the comment of this run: "r-", "r+" or nothing. The run of that
+# comment waits for this one to end (one run per pull request), so this one has to stop for it to start.
+newer_command() {
+    # shellcheck disable=SC2016
+    gh api "repos/$REPO/issues/$PR/comments" --paginate --jq '.[]
+        | select(.id > '"${COMMENT_ID:-0}"')
+        | select(.author_association == "OWNER" or .author_association == "MEMBER" or .author_association == "COLLABORATOR")
+        | .body | gsub("\r"; "") | split("\n") | map(select(test("\\S"))) | (.[0] // "") | ascii_downcase
+        | select(test("^\\s*/mergebot(\\s+\\S+)*\\s+r[+-](\\s|$)"))
+        | if test("\\sr-(\\s|$)") then "r-" else "r+" end' 2>/dev/null | tail -n 1 || true
+}
+
 # a repository without auto-merge: do its job here. Wait for CI on the head, rebase when the target branch moves (CI
-# then runs again), and merge only what is green. r- is seen here, as its own run waits for this one.
+# then runs again), and merge only what is green. A newer r- or r+ (e.g. r+ skipci) is seen here, and this run stops
+# so that the run of that command starts at once.
 wait_and_merge() {
-    local state empty=0 cancelled=0 unknown=0 current cancel
+    local state empty=0 cancelled=0 unknown=0 current newer
     say "Will merge as soon as CI is green.$bump_note$rebase_note$fw_note"
     for _ in $(seq 1 140); do
         sleep 30
-        cancel=$(gh api "repos/$REPO/issues/$PR/comments" --paginate --jq "[.[]
-            | select(.id > ${COMMENT_ID:-0})
-            | select(.author_association == \"OWNER\" or .author_association == \"MEMBER\" or .author_association == \"COLLABORATOR\")
-            | select(.body | test(\"^\\\\s*/mergebot\\\\s+r-\"; \"i\"))] | length" 2>/dev/null || echo 0)
-        [ "$cancel" = 0 ] || exit 0
+        newer=$(newer_command)
+        case "$newer" in
+            r-) exit 0 ;;
+            r+)
+                say "A newer \`/mergebot r+\` takes over from this one."
+                exit 0 ;;
+        esac
         read -r pr_state current < <(gh pr view "$PR" --repo "$REPO" --json state,headRefOid --jq '"\(.state) \(.headRefOid)"')
         [ "$pr_state" = OPEN ] || exit 0
         head_sha=$current
